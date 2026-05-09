@@ -21,11 +21,19 @@ backend-prod (Java/Spring) ──► SOCKS5 ──► 3proxy (этот VPS) ─�
 
 | Файл                  | Коммитится | Назначение                                         |
 | --------------------- | ---------- | -------------------------------------------------- |
-| `docker-compose.yml`  | да         | Запуск контейнера 3proxy                           |
+| `Dockerfile`          | да         | Минимальный образ: Alpine + пакет `3proxy`         |
+| `docker-compose.yml`  | да         | Запуск контейнера 3proxy (build из Dockerfile)     |
 | `3proxy.cfg.example`  | да         | Шаблон конфига 3proxy с плейсхолдерами `CHANGEME*` |
 | `README.md`           | да         | Этот файл                                          |
 | `.gitignore`          | да         | Исключает секреты из git                           |
 | `3proxy.cfg`          | НЕТ        | Реальный конфиг с паролем (создаётся на VPS)       |
+
+> Почему свой `Dockerfile`, а не готовый образ? Популярные образы вроде
+> `tarampampam/3proxy` имеют opinionated entrypoint-скрипты, которые
+> пытаются рендерить конфиг и писать в read-only части файловой системы —
+> контейнер падает с `Cannot create file: Read-only file system`.
+> Собственный Dockerfile из ~5 строк (Alpine + `apk add 3proxy`) полностью
+> снимает эту проблему, образ строится за ~10 секунд.
 
 ## Развёртывание на VPS
 
@@ -65,8 +73,9 @@ sed -i "s|^allow CHANGEME_USER CHANGEME_BACKEND_IP$|allow ${PROXY_USER} ${BACKEN
 # 5. Закрываем права на конфиг (там пароль в открытом виде)
 chmod 600 3proxy.cfg
 
-# 6. Поднимаем контейнер. Логи 3proxy идут в stdout — их видно через `docker logs`.
-docker compose up -d
+# 6. Билдим свой образ (один раз, ~10 секунд) и поднимаем контейнер.
+#    Логи 3proxy идут в stdout — их видно через `docker compose logs`.
+docker compose up -d --build
 docker compose logs -f socks5
 ```
 
@@ -104,8 +113,8 @@ sudo ufw status verbose
 ```bash
 cd ~/socks5-proxy
 git pull
-docker compose pull
-docker compose up -d
+# --build пересоберёт образ, если в Dockerfile/Alpine что-то менялось
+docker compose up -d --build
 ```
 
 ## Ротация пароля
@@ -123,8 +132,9 @@ docker compose up -d
   закрываем `chmod 600`, чтобы файл читал только владелец.
 - Минимизировать поверхность: используйте firewall + ACL по IP в конфиге.
 - Если пароль скомпрометирован — немедленно ротировать (см. выше).
-- Для прода зафиксируйте версию образа: в `docker-compose.yml` замените
-  `tarampampam/3proxy:latest` на конкретный тег (например `:0.9.4`).
+- Для прода зафиксируйте базовый образ: в `Dockerfile` уже стоит конкретный
+  тег `alpine:3.20` — его периодически обновляйте до свежей мажорной версии
+  и пересобирайте (`docker compose up -d --build`).
 
 ## Диагностика
 

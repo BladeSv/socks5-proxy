@@ -1,6 +1,12 @@
 services:
   socks5:
-    image: tarampampam/3proxy:latest
+    # Собираем свой образ из Alpine + 3proxy (см. Dockerfile).
+    # Это надёжнее готовых образов вроде tarampampam/3proxy, у которых
+    # entrypoint-скрипты пытаются писать в read-only фс и контейнер падает.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: socks5-proxy:local
     container_name: socks5-proxy
     restart: unless-stopped
     ports:
