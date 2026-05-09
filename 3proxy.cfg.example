@@ -16,11 +16,13 @@ nserver 8.8.8.8
 # Таймауты по умолчанию (см. https://3proxy.org/manual/)
 timeouts 1 5 30 60 180 1800 15 60
 
-# Демонизация и логирование
-daemon
-log /var/log/3proxy/3proxy.log D
+# Логирование в stdout — `docker compose logs -f socks5` покажет всё.
+# В Docker НЕ ставим `daemon` — главный процесс контейнера должен работать
+# в foreground, иначе контейнер выйдет сразу после форка. По той же причине
+# не пишем в файл и не используем `rotate` — это задача `docker logs` /
+# logging driver.
+log
 logformat "L%d-%m-%Y %H:%M:%S %z %N.%p %E %U %C:%c %R:%r %O %I %h %T"
-rotate 30
 
 # ---------------------------------------------------------------------
 # 1) Учётка для бэкенда. Замените CHANGEME_USER / CHANGEME_PASS.

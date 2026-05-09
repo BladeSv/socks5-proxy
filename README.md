@@ -26,7 +26,6 @@ backend-prod (Java/Spring) ──► SOCKS5 ──► 3proxy (этот VPS) ─�
 | `README.md`           | да         | Этот файл                                          |
 | `.gitignore`          | да         | Исключает секреты из git                           |
 | `3proxy.cfg`          | НЕТ        | Реальный конфиг с паролем (создаётся на VPS)       |
-| `logs/`               | НЕТ        | Логи 3proxy                                        |
 
 ## Развёртывание на VPS
 
@@ -66,8 +65,7 @@ sed -i "s|^allow CHANGEME_USER CHANGEME_BACKEND_IP$|allow ${PROXY_USER} ${BACKEN
 # 5. Закрываем права на конфиг (там пароль в открытом виде)
 chmod 600 3proxy.cfg
 
-# 6. Создаём папку для логов и поднимаем контейнер
-mkdir -p logs
+# 6. Поднимаем контейнер. Логи 3proxy идут в stdout — их видно через `docker logs`.
 docker compose up -d
 docker compose logs -f socks5
 ```
@@ -135,7 +133,10 @@ docker compose up -d
 docker compose ps
 
 # Логи 3proxy (формат: дата время N.p E user CLIENT:port DEST:port ...)
-tail -f logs/3proxy.log
+docker compose logs -f socks5
+
+# Только последние 100 строк
+docker compose logs --tail=100 socks5
 
 # Кто-то долбится на 1080?
 sudo ss -tnp | grep :1080

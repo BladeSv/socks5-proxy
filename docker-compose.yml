@@ -6,18 +6,11 @@ services:
     ports:
       - "1080:1080"
     volumes:
+      # Конфиг монтируем read-only — содержит пароль, ничего внутри менять не нужно
       - ./3proxy.cfg:/etc/3proxy/3proxy.cfg:ro
-      - ./logs:/var/log/3proxy
     environment:
       - TZ=Europe/Moscow
-    healthcheck:
-      test: ["CMD-SHELL", "netstat -ltn | grep -q ':1080' || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: 64M
+    # Лимиты ресурсов через mem_limit/cpus, т.к. `deploy.resources` работает
+    # только в Swarm-режиме, а не в обычном `docker compose up`.
+    mem_limit: 64m
+    cpus: 0.2
