@@ -32,8 +32,9 @@ backend-prod (Java/Spring) ──► SOCKS5 ──► 3proxy (этот VPS) ─�
 > `tarampampam/3proxy` имеют opinionated entrypoint-скрипты, которые
 > пытаются рендерить конфиг и писать в read-only части файловой системы —
 > контейнер падает с `Cannot create file: Read-only file system`.
-> Собственный Dockerfile из ~5 строк (Alpine + `apk add 3proxy`) полностью
-> снимает эту проблему, образ строится за ~10 секунд.
+> Собственный Dockerfile (multi-stage build из Alpine + 3proxy 0.9.5 из
+> исходников) полностью снимает эту проблему. Финальный образ ~10 MB,
+> сборка один раз занимает ~30 секунд.
 
 ## Развёртывание на VPS
 
