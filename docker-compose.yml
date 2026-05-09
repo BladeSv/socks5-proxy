@@ -1,0 +1,23 @@
+services:
+  socks5:
+    image: tarampampam/3proxy:latest
+    container_name: socks5-proxy
+    restart: unless-stopped
+    ports:
+      - "1080:1080"
+    volumes:
+      - ./3proxy.cfg:/etc/3proxy/3proxy.cfg:ro
+      - ./logs:/var/log/3proxy
+    environment:
+      - TZ=Europe/Moscow
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -ltn | grep -q ':1080' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M

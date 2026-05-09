@@ -1,0 +1,13 @@
+# Реальный конфиг с паролем — никогда не коммитим
+3proxy.cfg
+
+# Опциональный .env (если перейдём на envsubst-шаблон)
+.env
+
+# Логи и runtime-данные 3proxy
+logs/
+*.log
+
+# OS-мусор
+.DS_Store
+Thumbs.db
