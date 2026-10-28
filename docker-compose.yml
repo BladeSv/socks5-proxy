@@ -20,3 +20,13 @@ services:
     # только в Swarm-режиме, а не в обычном `docker compose up`.
     mem_limit: 64m
     cpus: 0.2
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
