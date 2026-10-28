@@ -8,10 +8,13 @@ Telegram-ботом проекта [tabletop-trail-bot](https://github.com/) д�
 ## Архитектура
 
 ```
-backend-prod (Java/Spring) ──► SOCKS5 ──► 3proxy (этот VPS) ──► api.telegram.org
-                                          auth: USER + PASSWORD
-                                          ACL: только IP бэкенда
+backend-prod (Java/Spring) ──► SOCKS5 ──► 3proxy (этот VPS) ──► api.telegram.org:443
+                                          auth: USER + PASSWORD   (api.openai.com:443 — по желанию)
+                                          ACL: только IP бэкенда, только перечисленные хосты
 ```
+
+Для домашних устройств (Keenetic) используется отдельный сценарий на
+WireGuard — см. `wireguard/README.md`.
 
 В **этот** репозиторий коммитятся только шаблоны и `docker-compose.yml`.
 Реальный `3proxy.cfg` с паролем создаётся на VPS из `3proxy.cfg.example`
@@ -61,15 +64,11 @@ PROXY_PASS="$(openssl rand -base64 24)"
 echo "USER=$PROXY_USER"
 echo "PASS=$PROXY_PASS"   # сохранить в менеджер паролей!
 
-# 4. Подставляем креды в 3proxy.cfg.
-#    Если знаем IP бэкенда — ограничиваем доступ им (рекомендуется):
-BACKEND_IP="<публичный IP вашего backend-prod>"
-sed -i "s|CHANGEME_USER:CL:CHANGEME_PASS|${PROXY_USER}:CL:${PROXY_PASS}|" 3proxy.cfg
-sed -i "s|^allow CHANGEME_USER CHANGEME_BACKEND_IP$|allow ${PROXY_USER} ${BACKEND_IP}|" 3proxy.cfg
-
-# 4b. ИЛИ если IP бэкенда неизвестен/динамический — оставляем только auth:
-# sed -i "s|CHANGEME_USER:CL:CHANGEME_PASS|${PROXY_USER}:CL:${PROXY_PASS}|" 3proxy.cfg
-# sed -i "s|^allow CHANGEME_USER CHANGEME_BACKEND_IP$|allow ${PROXY_USER}|" 3proxy.cfg
+# 4. Подставляем креды и статический IP бэкенда в 3proxy.cfg
+#    (пароль base64 может содержать "/" — поэтому разделитель "#").
+BACKEND_IP="<статический публичный IP вашего backend-prod>"
+sed -i "s#CHANGEME_USER#${PROXY_USER}#g; s#CHANGEME_PASS#${PROXY_PASS}#; s#CHANGEME_BACKEND_IP#${BACKEND_IP}#g" 3proxy.cfg
+grep -n CHANGEME 3proxy.cfg && echo "ОСТАЛИСЬ ЗАГЛУШКИ" || echo ok
 
 # 5. Закрываем права на конфиг (там пароль в открытом виде)
 chmod 600 3proxy.cfg
@@ -97,17 +96,25 @@ curl -v --socks5-hostname \
 
 Дополнительный уровень защиты — пускать на 1080 только IP бэкенда.
 
+**Важно:** Docker публикует порты через iptables в обход `ufw`, поэтому
+`ufw allow from ... port 1080` сам по себе порт НЕ закрывает. Ограничиваем
+через цепочку `DOCKER-USER` (трафик на проброшенный порт идёт через неё):
+
 ```bash
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 22/tcp
-sudo ufw allow from <BACKEND_IP> to any port 1080 proto tcp
 sudo ufw enable
-sudo ufw status verbose
+
+BACKEND_IP="<IP бэкенда>"
+sudo iptables -I DOCKER-USER -p tcp --dport 1080 -j DROP
+sudo iptables -I DOCKER-USER -p tcp --dport 1080 -s "$BACKEND_IP" -j ACCEPT
+sudo apt install -y iptables-persistent   # сохранить правила после перезагрузки
 ```
 
-Если firewall настраивать не хотите — оставьте `allow USER BACKEND_IP`
-внутри `3proxy.cfg`, это даст почти эквивалентную защиту на уровне 3proxy.
+(`--dport` в `DOCKER-USER` видит порт контейнера, т.е. 1080.) Проверка с
+постороннего IP: `nc -vz <VPS_IP> 1080` должен не соединяться.
+Вторая линия защиты — `allow USER BACKEND_IP` в `3proxy.cfg`.
 
 ## Обновление
 

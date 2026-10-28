@@ -7,3 +7,8 @@
 # OS-мусор
 .DS_Store
 Thumbs.db
+
+# WireGuard: ключи и конфиги
+*.key
+wg0.conf
+keenetic-wg.conf
